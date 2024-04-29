@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::JobPost;
 use color_eyre::eyre::{self, eyre};
+use scraper::{Html, Selector};
 
 pub fn mapped_detail(
     posted: String,
@@ -13,6 +14,7 @@ pub fn mapped_detail(
     let links: Vec<_> = link_raw.split('?').collect();
 
     let details = get_detail(&desc)?;
+
     let category = details
         .get("Category")
         .ok_or_else(|| eyre!("category not found"))?;
@@ -29,8 +31,6 @@ pub fn mapped_detail(
 
     Ok(job_post)
 }
-
-use scraper::{Html, Selector};
 
 pub fn get_detail(description: &str) -> eyre::Result<HashMap<String, String>> {
     let doc = Html::parse_document(description);
@@ -60,6 +60,22 @@ pub fn get_detail(description: &str) -> eyre::Result<HashMap<String, String>> {
 
         mapped.insert(key, value);
     }
+
+    let nodes = doc.tree.nodes();
+
+    for node in nodes {
+        let val = node.value();
+        if val.is_element() {
+            if val.as_element().unwrap().name() == "b" {
+                break;
+            }
+        }
+
+        if val.is_text() {
+            dbg!(val.as_text().unwrap());
+        }
+    }
+
     Ok(mapped)
 }
 
@@ -74,6 +90,14 @@ mod tests {
         let date = DateTime::parse_from_rfc2822(input)?.with_timezone(&Utc);
 
         Ok(date)
+    }
+
+    #[test]
+    fn test_extract_detail() {
+        let test1 = "We are looking for a part-time designer who can transform our Board of Directors update presentation outline into a visually appealing presentation in either Figma or PowerPoint within one day.<br /><br />\nThis will be an iterative process as we anticipate requesting changes and updating the presentation outline. It&#039;s crucial that the selected designer is fluent in Russian and proficient in English, as there may be potential for longer-term collaboration in the future.<br /><br />\nThe design style should be minimalistic, similar to our other corporate presentations (Example and Logobook will be provided).<br /><br /><b>Budget</b>: $80\n<br /><b>Posted On</b>: April 29, 2024 09:00 UTC<br /><b>Category</b>: Presentation Design<br /><b>Skills</b>:Financial Presentation,     Marketing Presentation,     Sales Presentation,     Analytical Presentation,     Presentation Design,     Graphic Design,     Microsoft PowerPoint,     Business Presentation    \n<br /><b>Skills</b>:        Financial Presentation,                     Marketing Presentation,                     Sales Presentation,                     Analytical Presentation,                     Presentation Design,                     Graphic Design,                     Microsoft PowerPoint,                     Business Presentation            <br /><b>Country</b>: United States\n<br /><a href=\"https://www.upwork.com/jobs/Urgent-Transform-outline-into-presentation_%7E0136d9648f43b2532a?source=rss\">click to apply</a>\n";
+        let res = get_detail(test1);
+
+        assert!(res.is_ok());
     }
 
     #[test]
