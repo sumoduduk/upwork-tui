@@ -5,18 +5,17 @@ pub mod get_bytes;
 mod parse_xml;
 
 use parse_xml::parse_xml;
-use serde_json::{json, Value};
 
-pub fn populate_data(byte_data: Bytes) -> eyre::Result<Vec<Value>> {
+use crate::FinalPost;
+
+pub fn populate_data(byte_data: Bytes) -> eyre::Result<Vec<FinalPost>> {
     let result_data = parse_xml(&byte_data[..])?;
 
-    let list_job: Vec<Value> = result_data
+    let list_job: Vec<FinalPost> = result_data
         .into_iter()
         .map(|j| {
             let budget = j.detail.get("Budget");
             let hourly = j.detail.get("Hourly Range");
-
-            let title_job: Vec<_> = j.title.split("- Upwork").collect();
 
             let mut price = "Unknown".to_string();
 
@@ -29,7 +28,19 @@ pub fn populate_data(byte_data: Bytes) -> eyre::Result<Vec<Value>> {
                 }
                 (_, _) => (),
             }
-            let response_json = json!({ "title": title_job[0], "link": j.link, "price": price });
+
+            let desc = j
+                .detail
+                .get("details")
+                .unwrap_or(&"No Description".to_owned())
+                .clone();
+
+            let response_json = FinalPost {
+                title: j.title.clone(),
+                link: j.link.clone(),
+                detail: desc.to_owned(),
+                price,
+            };
             response_json
         })
         .collect();
@@ -57,6 +68,7 @@ mod tests {
     fn test_from_file() -> eyre::Result<()> {
         let bytes_data = load_xml_file("job.xml")?;
         let res = populate_data(bytes_data);
+        dbg!(&res);
 
         assert!(res.is_ok());
 
