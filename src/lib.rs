@@ -13,3 +13,11 @@ pub struct JobPost {
     pub posted_on: String,
     pub posted_timestamp: i64,
 }
+
+#[derive(Debug, Serialize)]
+pub struct FinalPost {
+    title: String,
+    link: String,
+    detail: String,
+    price: String,
+}
