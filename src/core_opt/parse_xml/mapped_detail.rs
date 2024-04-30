@@ -63,18 +63,31 @@ pub fn get_detail(description: &str) -> eyre::Result<HashMap<String, String>> {
 
     let nodes = doc.tree.nodes();
 
+    let mut details = String::new();
+
     for node in nodes {
         let val = node.value();
+
         if val.is_element() {
-            if val.as_element().unwrap().name() == "b" {
-                break;
+            match val.as_element() {
+                Some(val_el) => {
+                    if val_el.name() == "b" {
+                        break;
+                    }
+                }
+                None => (),
             }
         }
 
         if val.is_text() {
-            dbg!(val.as_text().unwrap());
+            match val.as_text() {
+                Some(text) => details.push_str(&text.to_string()),
+                None => (),
+            }
         }
     }
+
+    mapped.insert("details".to_string(), details);
 
     Ok(mapped)
 }
